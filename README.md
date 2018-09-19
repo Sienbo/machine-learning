@@ -1,3 +1,4 @@
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
 # machine-learing
 ## INTRO：
   - linearRegression
@@ -13,3 +14,4 @@
     - 逻辑回归
     - TAG：监督学习，分类算法，线性算法
     - 优化算法：梯度下降法
+    - $$ x=y$$
