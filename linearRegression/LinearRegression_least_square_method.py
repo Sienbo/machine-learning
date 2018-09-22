@@ -1,5 +1,5 @@
 #-*- coding: utf-8 -*-
-'''优化方法使用最小二乘法'''
+'''优化方法使用最小二乘法,实现一个线性回归过程'''
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.font_manager import FontProperties
