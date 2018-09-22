@@ -8,7 +8,7 @@ font = FontProperties(fname=r"c:\windows\fonts\simsun.ttc", size=14)    # 解决
 def linearRegression(alpha=0.1,num_iters=400):
     print("加载数据\n···\n···")
     
-    data = loadtxtAndcsv_data("data.txt",",",np.float64)  #读取数据
+    data = loadtxtAndcsv_data("data_1.txt",",",np.float64)  #读取数据
     X = data[:,0:-1]      # X对应0到倒数第2列                  
     Y = data[:,-1]        # y对应最后一列  
     m = data.shape[0]         # 总的数据条数
