@@ -1,7 +1,7 @@
 #-*- coding: utf-8 -*-
 import numpy as np
 from sklearn import linear_model
-from sklearn.preprocessing import StandardScaler    #引入归一化的包
+from sklearn.preprocessing import StandardScaler    #引入归一化的类
 
 def linearRegression():
     print("加载数据...\n")
