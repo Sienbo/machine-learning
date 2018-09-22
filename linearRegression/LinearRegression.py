@@ -73,7 +73,7 @@ if __name__ == "__main__":
     import pandas as pd
 
     #读取样本文件数据
-    df = pd.read_csv("data.txt")
+    df = pd.read_csv("data_1.txt")
     X_train = df.iloc[:,0].values
     y_train = df.iloc[:,1].values
 
