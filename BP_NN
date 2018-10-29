@@ -1,0 +1,211 @@
+#coding:utf-8
+import numpy as np
+import sklearn.datasets
+import matplotlib.pyplot as plt
+
+def sigmoid(input):
+	'''
+	功能：
+		Sigmoid激活函数
+	输入：
+		input：即神经元的加权和
+	输出：
+   		激活后的输出值
+	'''
+	return 1/(1 + np.exp(-input))
+
+def derivationOfSigmoid(input):
+	'''
+	功能：
+		对Sigmoid函数求导
+	输入：
+		input：Sigmoid函数的输入
+	输出：
+		Sigmoid函数的导数值
+	'''
+	return sigmoid(input) * (1 - sigmoid(input))
+
+class BpNeuralNetwork():
+	'''
+	概括：
+		神经网络类，使用反向传播BP算法进行训练
+		神经网络结构使用list表示，list的长度表示网络的层数，其中的值代表
+		每一层网络的神经元个数；例如[3,4,5,2]表示一个神经网络：总共4层，
+		输入层3个神经元、第一个隐藏层4个神经元、第二个隐藏层5个神经元，
+		输出层为2个神经元
+	输入：
+		必选：
+			layer_struct:神经网络结构；
+		可选：
+			learning_rate:学习速率；
+			n_iters:最大迭代次数
+			plot_flag:画损失值图标志；
+	'''
+	def __init__(self,layer_struct,
+				learning_rate=0.05,n_iters=1000,
+				cost_function="cross_entropy",
+				plot_flag=False):
+		self.layer_struct = layer_struct
+		self.layer_num = len(layer_struct)
+
+		self.learning_rate = learning_rate
+		self.n_iters = n_iters
+		self.x = None
+		self.y = None
+		self._w = dict()
+		self._b = dict()
+		self.cost = []
+		self.cost_function = cost_function
+		self.plot_flag = plot_flag
+		self.init_w_and_b()
+
+	def init_w_and_b(self):
+		'''
+		功能：
+			初始化神经网络参数w和b；
+			输入层没有参数，从第二层开始到输出层，假设总共有n层，那么有
+			W1~Wn-1,b1~bn
+			使用字典来储存这些参数
+		'''
+		layer_num = self.layer_num
+		layer_struct = self.layer_struct
+		for i in range(1,layer_num):
+			self._w["w" + str(i)] = np.random.randn(layer_struct[i],layer_struct[i-1])/np.sqrt(self.layer_struct[i-1])
+			self._b["b" + str(i)] = np.zeros((layer_struct[i],1))
+		return self._w,self._b
+
+	def foward_propagation(self,X_train):
+		'''
+		功能：
+			输入数据的前向传播
+			层数从0开始
+			ai表示第i层神经网络的输出
+			zi表示为第i层神经网络的输入
+			a1即训练数据
+			没有z1
+		'''
+		cache = dict()
+		lay_num = self.layer_num
+		cache["a0"] = X_train
+		for i in range(1,lay_num):
+			cache["z" + str(i)] = np.dot(self._w["w" + str(i)],cache["a" + str(i-1)]) + self._b["b" + str(i)]
+			cache["a" + str(i)] = sigmoid(cache["z" + str(i)])
+			cache["w" + str(i)] = self._w["w" + str(i)]
+		return cache
+
+	def back_propagation(self,caches):
+		'''
+		功能：
+			反向传播算法
+		输入：
+			神经网络节点信息
+		输出：
+			反向传播的梯度
+		'''
+		layer_num = self.layer_num
+		grads = {}
+		#delta(L) = aL - y 
+		grads["delta_" + str(layer_num - 1)] = caches["a" + str(layer_num - 1)] - self.y_train
+		for i in reversed(range(1,layer_num-1)):
+			grads["delta_" + str(i)] = np.multiply(np.dot(caches["w" + str(i + 1)].T,grads["delta_" + str(i + 1)]),derivationOfSigmoid(caches["z"+str(i)]))
+		return grads
+
+	def calc_cost(self,output):
+		'''
+		功能：
+			计算损失值
+			使用交叉熵函数
+		'''
+		#样本数目
+		m = output.shape[1]
+		error = -np.sum(np.multiply(np.log(output),self.y_train) + np.multiply(np.log(1 - output), 1 - self.y_train))/m
+		return error
+
+	def update_w_and_b(self,grads,caches):
+		for i in range(1,self.layer_num):
+			print(np.sum(grads["delta_" + str(i)],axis=1).shape)
+			self._w["w" + str(i)] -= self.learning_rate * np.dot(grads["delta_" + str(i)],caches["a" + str(i - 1)].T)
+			self._b["b" + str(i)] -= self.learning_rate * np.sum(grads["delta_" + str(i)],axis=1).reshape(self.layer_struct[i],1)
+
+	def fit(self,X_train,y_train):
+		'''
+		功能：
+			训练神经网路
+		输入：
+			X_train：训练数据
+			y_train：训练数据的分类数据
+		'''
+		#判断输入输出的维度是否正确
+		n_input = X_train.shape[0]
+		n_output = y_train.shape[0]
+		m_x = X_train.shape[1]
+		m_y = y_train.shape[1]
+		if self.layer_struct[0] != n_input or self.layer_struct[-1] !=n_output:
+			pass
+			#raise("数据维度有错")
+		if m_x != m_y:
+			pass
+			#raise("数据维度有错")
+		#训练使用样本数目
+		self.X_train = X_train
+		self.y_train = y_train
+		m = m_x
+		cost_list = []
+		#迭代过程
+		for _ in range(self.n_iters):
+			#前向传播
+			caches = self.foward_propagation(X_train)
+			output = caches["a" + str(self.layer_num - 1)]
+			cost = self.calc_cost(output)
+			cost_list.append(cost)
+
+			#反向传播
+			grads = self.back_propagation(caches)
+			#更新权值
+			self.update_w_and_b(grads,caches)
+
+		#显示训练完成后的误差曲线
+		plt.plot(cost_list)
+		plt.xlabel(r"迭代次数")
+		plt.ylabel(r"神经网络误差")
+		plt.title(r"学习率 = {0}".format(str(self.learning_rate)))
+		plt.show()
+
+	def predict(self,x):
+		'''
+		功能：
+			使用训练好的模型对样本进行预测
+		'''
+		caches = self.foward_propagation(x)
+		output = caches["a" + str(self.layer_num - 1)]
+		result = output / np.sum(output,axis=0,keepdims=True)
+		return np.argmax(result,axis=0)
+
+if __name__ == "__main__":
+    plt.figure(figsize=(16, 32))
+
+    # 用sklearn的数据样本集，产生2种颜色的坐标点，noise是噪声系数，噪声越大，2种颜色的点分布越凌乱
+    xy, colors = sklearn.datasets.make_moons(60, noise=1.0)
+
+    # 因为点的颜色是1bit，我们设计一个神经网络，输出层有2个神经元。
+    # 标定输出[1,0]为红色点，输出[0,1]为蓝色点
+    expect_outputed = list()
+    for c in colors:
+        if c == 1:
+            expect_outputed.append([0,1])
+        else:
+            expect_outputed.append([1,0])
+
+    expect_outputed = np.array(expect_outputed).T
+
+    # 设计3层网络，改变隐藏层神经元的个数，观察神经网络分类红蓝点的效果
+    hidden_layer_neuron_num_list = [1,2,4,10,20,50]
+    for i, hidden_layer_neuron_num in enumerate(hidden_layer_neuron_num_list):
+        plt.subplot(5, 2, i + 1)
+        plt.title(u'隐藏层神经元数量: %d' % hidden_layer_neuron_num)
+
+        nn = BpNeuralNetwork(layer_struct=[2, hidden_layer_neuron_num, 2],plot_flag=True)
+        nn.fit(xy.T,expect_outputed)
+        #plot_decision_boundary(xy, colors, nn.predict_by_modle)
+
+    plt.show()
