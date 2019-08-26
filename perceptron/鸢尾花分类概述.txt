@@ -1,0 +1,6 @@
+分类算法：感知器
+训练样本：100
+特征值：2个
+分类个数：二分类
+iris_classifer_skcikit.py是基于scikit库编写
+perceptron.py是基于numpy库编写
