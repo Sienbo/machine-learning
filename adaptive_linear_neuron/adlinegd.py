@@ -1,10 +1,23 @@
 '''自适应神经元，用于分类
-Version = V.0.0'''
+Author = si'''
 
 import numpy as np
 
 class AdlineGD(object):
-	"""AdlineGD Classifier"""
+	"""AdlineGD Classifier
+	参数：
+		eta:float
+			优化算法中的学习速率
+		n_iter:int
+			迭代次数的上限
+	属性：
+		w_:array
+			Adline算法线性函数的参数集
+		b_:float
+			线性函数的偏移量
+		cost_:list
+			训练过程中的损失值
+	"""
 	def __init__(self,eta=0.01,n_iter=50):
 		self.eta = eta
 		self.n_iter = n_iter
@@ -36,3 +49,13 @@ class AdlineGD(object):
 	#预测函数
 	def predict(self,x):
 		return np.where(self.activation(x) > 0.0,1,-1)
+
+	#数据的标准化
+	def standardlize(self,X):
+		std_X = np.copy(X)
+
+		m,n = X.shape
+		for i in range(n):
+			std_X[:,i] = (X[:,i] - X[:,i].mean()) / X[:,i].std()
+
+		return std_X
