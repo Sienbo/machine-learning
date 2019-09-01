@@ -21,7 +21,7 @@ class Kmean():
 		cluster：dict
 			分簇后的结果，字典内key代表簇名，value是簇内数据的索引列表
 	'''
-	def __init__(self,n_clusters,max_iter=100,init="random"):
+	def __init__(self,n_clusters,max_iter=10,init="random"):
 		self.n_clusters = n_clusters
 		self.max_iter = max_iter
 		self.init = init
@@ -30,10 +30,12 @@ class Kmean():
 		#初始化簇中心点和簇内点
 		self.center = self.initial_center(X)
 		self.cluster = self.initial_cluster(self.center.keys())
+		self.cost = []
 		#开始迭代
 		for _ in range(self.max_iter):
 
 			cluster_dict = {}
+			self.cluster = self.initial_cluster(self.center.keys())
 			length = len(X)
 			for j in range(length):
 				distance = {}
@@ -46,8 +48,19 @@ class Kmean():
 
 			self.update_centers()
 
+			self.cost.append(self.calc_cost(X))
+
 		return self
 
+
+	def calc_cost(self,X):
+		cost = 0
+
+		for key,value in self.center.items():
+			for data in X[self.cluster[key]]:
+				cost += self.calc_distance(value,data)
+
+		return cost
 
 	#计算两点之间的距离
 	def calc_distance(self,spot1,spot2):
@@ -132,13 +145,14 @@ if __name__ == '__main__':
 	from sklearn.datasets import make_blobs 
 	import matplotlib.pyplot as plt
 
-	X,y = make_blobs(n_samples=150,n_features=2,centers=3,cluster_std=0.5,shuffle=True,random_state=0)
+	X,y = make_blobs(n_samples=150,n_features=2,centers=3,cluster_std=0.8,shuffle=True,random_state=0)
 
-	km = Kmean(n_clusters=3,max_iter=100,init="k++")
+	km = Kmean(n_clusters=3,max_iter=10,init="k++")
 	km.fit(X)
 
 	clusters = km.cluster
 	centers = km.center
+	print(km.cost)
 
 	for key,value in clusters.items():
 		#簇内的点
