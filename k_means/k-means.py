@@ -108,8 +108,6 @@ class Kmean():
 						max_distace_sum = distance_sum
 						center_dict[name] = X[i,:]
 
-			print(center_dict)
-
 		else:
 			raise NameError('no this init style')
 
