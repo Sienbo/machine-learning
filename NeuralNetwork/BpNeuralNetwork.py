@@ -1,4 +1,3 @@
-#coding:utf-8
 import numpy as np
 import sklearn.datasets
 import matplotlib.pyplot as plt
@@ -78,10 +77,26 @@ class BpNeuralNetwork():
 		#选择激活函数
 		self.activated_function = self.activated(action_function)
 		self.derivation_function = self.activatedBackPropagation(action_function)
-		self._w = dict()
-		self._b = dict()
+		self._w = {}
+		self._b = {}
 		self.cost_function = cost_function
 		self.initWAndB()
+
+	def initWAndB(self):
+		'''
+		功能：
+			初始化神经网络参数w和b；
+			输入层没有参数，从第二层开始到输出层，假设总共有n层，那么有
+			W2~Wn,b2~bn
+			使用字典来储存这些参数
+		'''
+		layer_num = self.layer_num
+		layer_struct = self.layer_struct
+		for i in range(1,layer_num):
+			self._w["w" + str(i+1)] = np.random.randn(layer_struct[i-1],layer_struct[i])/np.sqrt(self.layer_struct[i])
+			self._b["b" + str(i+1)] = np.zeros(layer_struct[i])
+		return self._w,self._b
+
 
 	def activated(self,action_function):
 		#选择激活函数
@@ -99,37 +114,22 @@ class BpNeuralNetwork():
 			return derivationOfRelu
 		else:
 			return derivationOfSigmoid
-
-	def initWAndB(self):
-		'''
-		功能：
-			初始化神经网络参数w和b；
-			输入层没有参数，从第二层开始到输出层，假设总共有n层，那么有
-			W1~Wn-1,b1~bn
-			使用字典来储存这些参数
-		'''
-		layer_num = self.layer_num
-		layer_struct = self.layer_struct
-		for i in range(1,layer_num):
-			self._w["w" + str(i)] = np.random.randn(layer_struct[i],layer_struct[i-1])/np.sqrt(self.layer_struct[i-1])
-			self._b["b" + str(i)] = np.zeros((layer_struct[i],1))
-		return self._w,self._b
-
-	def foward_propagation(self,X_train):
+	
+	def fowardPropagation(self,X_train):
 		'''
 		功能：
 			输入数据的前向传播
-			层数从0开始
+			层数从1开始
 			ai表示第i层神经网络的输出
 			zi表示为第i层神经网络的输入
 			a1即训练数据
 			没有z1
 		'''
-		cache = dict()
+		cache = {}
 		lay_num = self.layer_num
-		cache["a0"] = X_train
-		for i in range(1,lay_num):
-			cache["z" + str(i)] = np.dot(self._w["w" + str(i)],cache["a" + str(i-1)]) + self._b["b" + str(i)]
+		cache["a1"] = X_train
+		for i in range(2,lay_num+1):
+			cache["z" + str(i)] = np.dot(cache["a" + str(i-1)],self._w["w" + str(i)]) + self._b["b" + str(i)]
 			cache["a" + str(i)] = self.activated_function(cache["z" + str(i)])
 			cache["w" + str(i)] = self._w["w" + str(i)]
 		return cache
@@ -146,9 +146,9 @@ class BpNeuralNetwork():
 		layer_num = self.layer_num
 		grads = {}
 		#delta(L) = aL - y 
-		grads["delta_" + str(layer_num - 1)] = caches["a" + str(layer_num - 1)] - self.y_train
-		for i in reversed(range(1,layer_num-1)):
-			grads["delta_" + str(i)] = np.multiply(np.dot(caches["w" + str(i + 1)].T,grads["delta_" + str(i + 1)]),
+		grads["delta_" + str(layer_num)] = caches["a" + str(layer_num)] - self.y_train
+		for i in reversed(range(2,layer_num)):
+			grads["delta_" + str(i)] = np.multiply(np.dot(grads["delta_" + str(i + 1)],caches["w" + str(i + 1)].T,),\
 				self.derivation_function(caches["z"+str(i)]))
 		return grads
 
@@ -159,14 +159,14 @@ class BpNeuralNetwork():
 			使用交叉熵函数
 		'''
 		#样本数目
-		m = output.shape[1]
+		m = output.shape[0]
 		error = -np.sum(np.multiply(np.log(output),self.y_train) + np.multiply(np.log(1 - output), 1 - self.y_train))/m
 		return error
 
 	def updateWAndB(self,grads,caches):
-		for i in range(1,self.layer_num):
-			self._w["w" + str(i)] -= self.learning_rate * np.dot(grads["delta_" + str(i)],caches["a" + str(i - 1)].T)
-			self._b["b" + str(i)] -= self.learning_rate * np.sum(grads["delta_" + str(i)],axis=1).reshape(self.layer_struct[i],1)
+		for i in range(2,self.layer_num+1):
+			self._w["w" + str(i)] -= self.learning_rate * np.dot(caches["a" + str(i - 1)].T,grads["delta_" + str(i)])
+			self._b["b" + str(i)] -= self.learning_rate * np.sum(grads["delta_" + str(i)],axis=0)
 
 	def fit(self,X_train,y_train):
 		'''
@@ -177,26 +177,28 @@ class BpNeuralNetwork():
 			y_train：训练数据的分类数据
 		'''
 		#判断输入输出的维度是否正确
-		n_input = X_train.shape[0]
-		n_output = y_train.shape[0]
-		m_x = X_train.shape[1]
-		m_y = y_train.shape[1]
+		n_input = X_train.shape[1]
+		n_output = y_train.shape[1]
+		m_x = X_train.shape[0]
+		m_y = y_train.shape[0]
 		#训练样本的输入输出和网络结构不符
 		if self.layer_struct[0] != n_input or self.layer_struct[-1] !=n_output:
-			raise KeyError
+			raise KeyError("input or output features mismatching")
 		#训练样本和标签样本数目不同
 		if m_x != m_y:
-			raise KeyError
+			raise KeyError("X_train and y_train have different number")
+
 		#训练使用样本数目
 		self.X_train = X_train
 		self.y_train = y_train
+
 
 		self.cost_list = []
 		#训练迭代过程
 		for _ in range(self.n_iters):
 			#前向传播
-			caches = self.foward_propagation(X_train)
-			output = caches["a" + str(self.layer_num - 1)]
+			caches = self.fowardPropagation(X_train)
+			output = caches["a" + str(self.layer_num)]
 			cost = self.calcCost(output)
 			self.cost_list.append(cost)
 
@@ -214,10 +216,10 @@ class BpNeuralNetwork():
 		输出：
 			预测出来的类别
 		'''
-		caches = self.foward_propagation(x)
-		output = caches["a" + str(self.layer_num - 1)]
-		result = output / np.sum(output,axis=0,keepdims=True)
-		return np.argmax(result,axis=0)
+		caches = self.fowardPropagation(x)
+		output = caches["a" + str(self.layer_num)]
+		#result = output / np.sum(output,axis=0,keepdims=True)
+		return np.argmax(output,axis=1)
 
 def plotCostValue(iter,cost_list):
 	#画出训练完成后的误差曲线
@@ -229,20 +231,20 @@ def plotCostValue(iter,cost_list):
 def plotDecisionBoundary(X_train,colors,pred_func):
 	 # xy是坐标点的集合，把集合的范围算出来
     # 加减0.5相当于扩大画布的范围，不然画出来的图坐标点会落在图的边缘，逼死强迫症患者
-    x1_min, x1_max = X_train[0, :].min() - 0.5, X_train[0, :].max() + 0.5
-    x2_min, x2_max = X_train[1, :].min() - 0.5, X_train[1, :].max() + 0.5
+    x1_min, x1_max = X_train[:,0].min() - 0.5, X_train[:,0].max() + 0.5
+    x2_min, x2_max = X_train[:,1].min() - 0.5, X_train[:,1].max() + 0.5
     # 以h为分辨率，生成采样点的网格，就像一张网覆盖所有颜色点
     h = 0.01
     xx, yy = np.meshgrid(np.arange(x1_min, x1_max, h), np.arange(x2_min, x2_max, h))
     # 把网格点集合作为输入到模型，也就是预测这个采样点是什么颜色的点，从而得到一个决策面
-    Z = pred_func(np.array([xx.ravel(), yy.ravel()]))
+    Z = pred_func(np.column_stack([xx.ravel(), yy.ravel()]))
     Z = Z.reshape(xx.shape)
 
     # 利用等高线，把预测的结果画出来，效果上就是画出红蓝点的分界线
     plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral)
 
     # 训练用的红蓝点点也画出来
-    plt.scatter(X_train[0,:], X_train[1,:], c=colors, marker='o', cmap=plt.cm.Spectral, edgecolors='black')
+    plt.scatter(X_train[:,0], X_train[:,1], c=colors, marker='o', cmap=plt.cm.Spectral, edgecolors='black')
 
 
 if __name__ == "__main__":
@@ -251,7 +253,7 @@ if __name__ == "__main__":
 
     # 因为点的颜色是1bit，我们设计一个神经网络，输出层有2个神经元。
     # 标定输出[1,0]为红色点，输出[0,1]为蓝色点
-	expect_outputed = list()
+	expect_outputed = []
 	for c in colors:
 		if c == 1:
 			expect_outputed.append([0,1])
@@ -259,8 +261,8 @@ if __name__ == "__main__":
 			expect_outputed.append([1,0])
 	
 	#训练数据的一列代表一个样本；即行数代表样本特征值个数，列数代表样本个数
-	X_train = xy.T
-	expect_outputed = np.array(expect_outputed).T
+	X_train = xy
+	expect_outputed = np.array(expect_outputed)
 
     # 设计3层网络，改变隐藏层神经元的个数，观察神经网络分类红蓝点的效果
 	hidden_layer_neuron_num_list = [1,2,4,8,16,32]
@@ -275,7 +277,7 @@ if __name__ == "__main__":
 		nn = BpNeuralNetwork(layer_struct=[2, hidden_layer_neuron_num, 2],action_function="sigmoid",learning_rate=0.02)
 		nn.fit(X_train,expect_outputed)
 		#画出边界图
-		plotDecisionBoundary(X_train, colors, nn.predict)
+		plotDecisionBoundary(X_train,colors,nn.predict)
 		#画出损失值趋势图
 		#plotCostValue(i,nn.cost_list)
 

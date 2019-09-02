@@ -158,7 +158,7 @@ if __name__ == '__main__':
 		#簇内的点
 		plt.scatter((X[value])[:,0],(X[value])[:,1],label=key)
 	for key,value in centers.items():
-		plt.scatter(value[0],value[1],marker="*",label="centers",s=100)
+		plt.scatter(value[0],value[1],c="red",marker="*",s=150)
 	plt.legend()
 	plt.show()
 
